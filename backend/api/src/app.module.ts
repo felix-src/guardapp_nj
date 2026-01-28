@@ -6,6 +6,9 @@ import { UnitsService } from './units/units.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Unit } from './units/unit.entity';
 import { User } from './auth/user.entity';
+import { AuthService } from './auth/auth.service';
+import { AuthController } from './auth/auth.controller';
+import { JwtModule } from '@nestjs/jwt';
 
 
 @Module({
@@ -17,11 +20,17 @@ import { User } from './auth/user.entity';
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [Unit],
+  entities: [Unit, User],
   synchronize: true,
 }),
-TypeOrmModule.forFeature([Unit]),],
-  controllers: [UnitsController, AppController],
-  providers: [AppService, UnitsService],
+TypeOrmModule.forFeature([Unit, User]),
+JwtModule.register({
+  secret: process.env.JWT_SECRET,
+  signOptions: { expiresIn: '1h' },
+}),
+
+],
+  controllers: [UnitsController, AppController, AuthController],
+  providers: [AppService, UnitsService, AuthService],
 })
 export class AppModule {}

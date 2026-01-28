@@ -1,7 +1,15 @@
 
+import {
+  Controller,
+  Get,
+  Param,
+  Post,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
 import { UnitsService } from './units.service';
-import { Controller, Get, Param, Post, Body, UseGuards } from '@nestjs/common';
-import { RolesGuard } from '../auth/roles.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AdminGuard } from '../auth/admin.guard';
 
 @Controller('units')
 export class UnitsController {
@@ -12,7 +20,7 @@ export class UnitsController {
     return this.unitsService.findAll();
   }
  
-  @Post() @UseGuards(RolesGuard)
+  @Post() @UseGuards(JwtAuthGuard, AdminGuard)
   create(@Body() body: { name: string; state: string }) {
     return this.unitsService.create(body);
   }
