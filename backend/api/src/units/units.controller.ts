@@ -1,5 +1,7 @@
-import { Controller, Get, Param, Post, Body } from '@nestjs/common';
+
 import { UnitsService } from './units.service';
+import { Controller, Get, Param, Post, Body, UseGuards } from '@nestjs/common';
+import { RolesGuard } from '../auth/roles.guard';
 
 @Controller('units')
 export class UnitsController {
@@ -10,7 +12,7 @@ export class UnitsController {
     return this.unitsService.findAll();
   }
  
-  @Post()
+  @Post() @UseGuards(RolesGuard)
   create(@Body() body: { name: string; state: string }) {
     return this.unitsService.create(body);
   }
