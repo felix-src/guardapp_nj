@@ -11,6 +11,8 @@ import { AuthController } from './auth/auth.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { MiddlewareConsumer} from '@nestjs/common';
 import { LoggerMiddleware } from './common/logger.middleware';
+import { AuditLog } from './audit/audit-log.entity';
+import { AuditService } from './audit/audit.service';
 
 
 @Module({
@@ -22,10 +24,10 @@ import { LoggerMiddleware } from './common/logger.middleware';
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [Unit, User],
+  entities: [Unit, User, AuditLog],
   synchronize: true,
 }),
-TypeOrmModule.forFeature([Unit, User]),
+TypeOrmModule.forFeature([Unit, User, AuditLog]),
 JwtModule.register({
   secret: process.env.JWT_SECRET,
   signOptions: { expiresIn: '1h' },
@@ -33,7 +35,7 @@ JwtModule.register({
 
 ],
   controllers: [UnitsController, AppController, AuthController],
-  providers: [AppService, UnitsService, AuthService],
+  providers: [AppService, UnitsService, AuthService, AuditService],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
