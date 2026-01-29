@@ -13,6 +13,8 @@ import { MiddlewareConsumer} from '@nestjs/common';
 import { LoggerMiddleware } from './common/logger.middleware';
 import { AuditLog } from './audit/audit-log.entity';
 import { AuditService } from './audit/audit.service';
+import { AuditController } from './audit/audit.controller';
+import { AdminUserController } from './auth/admin.controller';
 
 
 @Module({
@@ -34,7 +36,7 @@ JwtModule.register({
 }),
 
 ],
-  controllers: [UnitsController, AppController, AuthController],
+  controllers: [UnitsController, AppController, AuthController, AuditController,AdminUserController],
   providers: [AppService, UnitsService, AuthService, AuditService],
 })
 export class AppModule {
