@@ -15,6 +15,8 @@ import { AuditLog } from './audit/audit-log.entity';
 import { AuditService } from './audit/audit.service';
 import { AuditController } from './audit/audit.controller';
 import { AdminUserController } from './auth/admin.controller';
+import { Memo } from './memos/memo.entity';
+import { MemoController } from './memos/memo.controller';
 
 
 @Module({
@@ -26,17 +28,17 @@ import { AdminUserController } from './auth/admin.controller';
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [Unit, User, AuditLog],
+  entities: [Unit, User, AuditLog, Memo],
   synchronize: true,
 }),
-TypeOrmModule.forFeature([Unit, User, AuditLog]),
+TypeOrmModule.forFeature([Unit, User, AuditLog, Memo]),
 JwtModule.register({
   secret: process.env.JWT_SECRET,
   signOptions: { expiresIn: '1h' },
 }),
 
 ],
-  controllers: [UnitsController, AppController, AuthController, AuditController,AdminUserController],
+  controllers: [UnitsController, AppController, AuthController, AuditController,AdminUserController, MemoController],
   providers: [AppService, UnitsService, AuthService, AuditService],
 })
 export class AppModule {
