@@ -9,6 +9,8 @@ import { User } from './auth/user.entity';
 import { AuthService } from './auth/auth.service';
 import { AuthController } from './auth/auth.controller';
 import { JwtModule } from '@nestjs/jwt';
+import { MiddlewareConsumer} from '@nestjs/common';
+import { LoggerMiddleware } from './common/logger.middleware';
 
 
 @Module({
@@ -33,4 +35,8 @@ JwtModule.register({
   controllers: [UnitsController, AppController, AuthController],
   providers: [AppService, UnitsService, AuthService],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes('*');
+  }
+}
