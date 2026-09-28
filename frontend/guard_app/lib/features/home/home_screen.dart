@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../memos/memo_download.dart';
 import '../../core/token_storage.dart';
 import '../memos/memo_api.dart';
+import '../../core/session.dart';
+import '../units/unit_manage_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,12 +15,23 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _memos = [];
   bool _loadingMemos = true;
+  CurrentUser? _user = Session.user;
 
   @override
   void initState() {
     super.initState();
     _enforceAuth();
     _loadMemos();
+    _loadSession();
+  }
+
+  Future<void> _loadSession() async {
+    try {
+      final user = await Session.load();
+      if (mounted) setState(() => _user = user);
+    } catch (e) {
+      debugPrint('FAILED TO LOAD PROFILE: $e');
+    }
   }
 
   Future<void> _enforceAuth() async {
@@ -47,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _logout() async {
     await TokenStorage.clear();
+    Session.clear();
     if (mounted) {
       Navigator.pushReplacementNamed(context, '/');
     }
@@ -58,6 +72,20 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Home'),
         actions: [
+          if (_user case CurrentUser(
+            isReadinessNco: true,
+            unitId: final int unitId,
+          ))
+            IconButton(
+              icon: const Icon(Icons.manage_accounts),
+              tooltip: 'My unit',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => UnitManageScreen(unitId: unitId),
+                ),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.groups),
             tooltip: 'Units',

@@ -69,8 +69,10 @@ class _UnitsScreenState extends State<UnitsScreen> {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          UnitDetailScreen(unitId: unit.id, unitName: unit.name),
+                      builder: (_) => UnitDetailScreen(
+                        unitId: unit.id,
+                        unitName: unit.name,
+                      ),
                     ),
                   ),
                 );

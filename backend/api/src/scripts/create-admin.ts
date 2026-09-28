@@ -35,7 +35,7 @@ function promptHidden(question: string): Promise<string> {
 }
 
 async function main() {
-  const email = process.argv[2];
+  const email = process.argv[2]?.trim().toLowerCase();
   if (!email) {
     console.error('Usage: npm run create-admin -- <email>');
     process.exit(1);
@@ -57,7 +57,7 @@ async function main() {
       if (password.length < 8) {
         throw new Error('Password must be at least 8 characters');
       }
-      user = await app.get(AuthService).register(email, password);
+      user = await app.get(AuthService).createUser(email, password);
       console.log(`Created account ${email}.`);
     }
 

@@ -73,6 +73,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ? const CircularProgressIndicator()
                   : const Text('Login'),
             ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => Navigator.pushNamed(context, '/join'),
+              child: const Text('New here? Join with a unit code'),
+            ),
           ],
         ),
       ),

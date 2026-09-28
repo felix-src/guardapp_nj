@@ -18,6 +18,8 @@ import { AuditController } from './audit/audit.controller';
 import { AdminUserController } from './auth/admin.controller';
 import { Memo } from './memos/memo.entity';
 import { MemoController } from './memos/memo.controller';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { UnitScopeGuard } from './auth/unit-scope.guard';
 
 
 @Module({
@@ -33,6 +35,8 @@ import { MemoController } from './memos/memo.controller';
   synchronize: true,
 }),
 TypeOrmModule.forFeature([Unit, PointOfContact, User, AuditLog, Memo]),
+// Only applied where ThrottlerGuard is used (AuthController)
+ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
 JwtModule.register({
   secret: process.env.JWT_SECRET,
   signOptions: { expiresIn: '1h' },
@@ -40,7 +44,7 @@ JwtModule.register({
 
 ],
   controllers: [UnitsController, AppController, AuthController, AuditController,AdminUserController, MemoController],
-  providers: [AppService, UnitsService, AuthService, AuditService],
+  providers: [AppService, UnitsService, AuthService, AuditService, UnitScopeGuard],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

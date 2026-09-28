@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/session.dart';
 import 'unit.dart';
 import 'unit_api.dart';
+import 'unit_manage_screen.dart';
 
 class UnitDetailScreen extends StatefulWidget {
   final int unitId;
@@ -45,7 +47,26 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.unitName)),
+      appBar: AppBar(
+        title: Text(widget.unitName),
+        actions: [
+          if (Session.user?.canManageUnit(widget.unitId) ?? false)
+            IconButton(
+              icon: const Icon(Icons.manage_accounts),
+              tooltip: 'Manage unit',
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => UnitManageScreen(unitId: widget.unitId),
+                  ),
+                );
+                // Contacts may have changed
+                if (mounted) _refresh();
+              },
+            ),
+        ],
+      ),
       body: FutureBuilder<Unit>(
         future: _unit,
         builder: (context, snapshot) {

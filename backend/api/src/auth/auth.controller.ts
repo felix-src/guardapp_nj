@@ -1,18 +1,22 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UseGuards, Req } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
+// Per-IP rate limits (defaults in AppModule) against password and
+// unit-code guessing.
 @Controller('auth')
+@UseGuards(ThrottlerGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  async register(@Body() body: RegisterDto) {
-    const user = await this.authService.register(body.email, body.password);
-    return { id: user.id, email: user.email, role: user.role };
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  register(@Body() body: RegisterDto) {
+    return this.authService.register(body);
   }
 
   @Post('login')
@@ -20,12 +24,10 @@ export class AuthController {
     return this.authService.login(body.email, body.password);
   }
 
-  @Post('me')
+  // Role and unit are read fresh from the database, not from the JWT
+  @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@Req() req: any) {
-    return {
-      userId: req.user.sub,
-      role: req.user.role,
-    };
+    return this.authService.getProfile(req.user.sub);
   }
 }

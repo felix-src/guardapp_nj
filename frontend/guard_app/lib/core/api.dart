@@ -1,7 +1,21 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'authed_http.dart';
 import 'config.dart';
 import 'token_storage.dart';
+
+class RegisterResult {
+  final String unitName;
+  RegisterResult(this.unitName);
+}
+
+class RegisterException implements Exception {
+  final String message;
+  RegisterException(this.message);
+
+  @override
+  String toString() => message;
+}
 
 class AuthApi {
   static String? accessToken;
@@ -27,5 +41,43 @@ class AuthApi {
     }
 
     return false;
+  }
+
+  /// Creates a soldier account in the unit that [unitCode] belongs to.
+  /// Throws [RegisterException] with a message fit to show the user.
+  static Future<RegisterResult> register({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required String rank,
+    required String unitCode,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$apiBaseUrl/auth/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        'firstName': firstName,
+        'lastName': lastName,
+        'rank': rank,
+        'unitCode': unitCode,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      return RegisterResult(jsonDecode(response.body)['unitName']);
+    }
+
+    if (response.statusCode == 429) {
+      throw RegisterException(
+        'Too many attempts. Wait a minute and try again.',
+      );
+    }
+
+    throw RegisterException(
+      errorMessage(response) ?? 'Sign-up failed. Please try again.',
+    );
   }
 }
