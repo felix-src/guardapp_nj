@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'core/authed_http.dart';
 import 'features/auth/login_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/units/units_screen.dart';
 
 class GuardApp extends StatelessWidget {
   final bool isAuthenticated;
@@ -9,6 +11,7 @@ class GuardApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Guard Resource App',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.green),
@@ -19,6 +22,7 @@ class GuardApp extends StatelessWidget {
       routes: {
         '/': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
+        '/units': (context) => const UnitsScreen(),
       },
     );
   }

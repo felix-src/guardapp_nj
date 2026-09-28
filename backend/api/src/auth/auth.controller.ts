@@ -3,32 +3,24 @@ import { AuthService } from './auth.service';
 import { UseGuards, Req } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  register(@Body() body: { email: string; password: string }) {
-    return this.authService.register(body.email, body.password);
+  async register(@Body() body: RegisterDto) {
+    const user = await this.authService.register(body.email, body.password);
+    return { id: user.id, email: user.email, role: user.role };
   }
 
   @Post('login')
-  async login(@Body() body: LoginDto) {
-    console.log('LOGIN BODY:', body);
-    const result = await this.authService.login(
-      body.email,
-      body.password,
-    );
-
-    if (!result) {
-      return { message: 'Invalid credentials' };
-    }
-
-    return result;
+  login(@Body() body: LoginDto) {
+    return this.authService.login(body.email, body.password);
   }
 
-    @Post('me')
+  @Post('me')
   @UseGuards(JwtAuthGuard)
   me(@Req() req: any) {
     return {
@@ -36,5 +28,4 @@ export class AuthController {
       role: req.user.role,
     };
   }
-
 }

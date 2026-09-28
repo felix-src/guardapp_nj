@@ -5,6 +5,7 @@ import { UnitsController } from './units/units.controller';
 import { UnitsService } from './units/units.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Unit } from './units/unit.entity';
+import { PointOfContact } from './units/point-of-contact.entity';
 import { User } from './auth/user.entity';
 import { AuthService } from './auth/auth.service';
 import { AuthController } from './auth/auth.controller';
@@ -28,10 +29,10 @@ import { MemoController } from './memos/memo.controller';
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [Unit, User, AuditLog, Memo],
+  entities: [Unit, PointOfContact, User, AuditLog, Memo],
   synchronize: true,
 }),
-TypeOrmModule.forFeature([Unit, User, AuditLog, Memo]),
+TypeOrmModule.forFeature([Unit, PointOfContact, User, AuditLog, Memo]),
 JwtModule.register({
   secret: process.env.JWT_SECRET,
   signOptions: { expiresIn: '1h' },

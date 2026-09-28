@@ -35,16 +35,11 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
-    console.log('EMAIL:', email);
-    console.log('PASSWORD:', password);
-
     const user = await this.validateUser(email, password);
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
-
-    console.log('USER FOUND: YES');
 
     const payload = {
       sub: user.id,
@@ -54,7 +49,5 @@ export class AuthService {
     return {
       access_token: this.jwtService.sign(payload),
     };
-    
-console.log('JWT ISSUED');
   }
 }

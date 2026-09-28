@@ -20,21 +20,27 @@ class _LoginScreenState extends State<LoginScreen> {
       error = null;
     });
 
-    final success = await AuthApi.login(
-      emailController.text.trim(),
-      passwordController.text.trim(),
-    );
+    bool success = false;
+    String? failure;
+    try {
+      success = await AuthApi.login(
+        emailController.text.trim(),
+        passwordController.text.trim(),
+      );
+      if (!success) failure = 'Invalid credentials';
+    } catch (_) {
+      failure = 'Could not reach the server';
+    }
+
+    if (!mounted) return;
 
     setState(() {
       isLoading = false;
+      error = failure;
     });
 
     if (success) {
       Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      setState(() {
-        error = 'Invalid credentials';
-      });
     }
   }
 

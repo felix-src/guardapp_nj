@@ -36,6 +36,7 @@ export class MemoController {
 
   // List memo metadata
   @Get()
+  @UseGuards(JwtAuthGuard)
   async list() {
     return this.memoRepo.find({
       order: { createdAt: 'DESC' },
@@ -44,6 +45,7 @@ export class MemoController {
 
   // Download PDF
   @Get(':id/download')
+  @UseGuards(JwtAuthGuard)
   async download(@Param('id') id: string, @Res() res: Response) {
     const memo = await this.memoRepo.findOneBy({ id: Number(id) });
     if (!memo) {

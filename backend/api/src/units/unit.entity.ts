@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { PointOfContact } from './point-of-contact.entity';
 
 @Entity()
 export class Unit {
@@ -10,4 +11,7 @@ export class Unit {
 
   @Column()
   state: string;
+
+  @OneToMany(() => PointOfContact, (contact) => contact.unit)
+  contacts: PointOfContact[];
 }

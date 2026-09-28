@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../memos/memo_download.dart';
 import '../../core/token_storage.dart';
-import '../../core/config.dart';
 import '../memos/memo_api.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -33,12 +31,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadMemos() async {
     try {
       final memos = await MemoApi.fetchMemos();
+      if (!mounted) return;
       setState(() {
         _memos = memos;
         _loadingMemos = false;
       });
     } catch (e) {
-      print('FAILED TO LOAD MEMOS: $e');
+      debugPrint('FAILED TO LOAD MEMOS: $e');
+      if (!mounted) return;
       setState(() {
         _loadingMemos = false;
       });
@@ -58,6 +58,11 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Home'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.groups),
+            tooltip: 'Units',
+            onPressed: () => Navigator.pushNamed(context, '/units'),
+          ),
           IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
         ],
       ),
@@ -83,8 +88,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         filename: memo['filename'],
                       );
                     } catch (e) {
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to open memo')),
+                        const SnackBar(content: Text('Failed to open memo')),
                       );
                     }
                   },
