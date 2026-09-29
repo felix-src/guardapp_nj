@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'core/authed_http.dart';
+import 'core/theme.dart';
 import 'features/auth/login_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/join/join_screen.dart';
@@ -14,9 +15,10 @@ class GuardApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navigatorKey,
-      title: 'Guard Resource App',
+      title: 'NJ Guard',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.green),
+      theme: buildGuardTheme(Brightness.light),
+      darkTheme: buildGuardTheme(Brightness.dark),
 
       // 🔐 THIS IS THE ONLY LOGIC CHANGE
       initialRoute: isAuthenticated ? '/home' : '/',

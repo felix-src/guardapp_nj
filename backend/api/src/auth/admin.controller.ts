@@ -92,6 +92,11 @@ export class AdminUserController {
     if (!user) throw new NotFoundException('User not found');
     await this.unitsService.ensureUnitExists(body.unitId);
 
+    if (user.unitId !== body.unitId) {
+      // Their old position belongs to the old unit's chart
+      user.orgElementId = null;
+      user.dutyRole = null;
+    }
     user.role = Role.ReadinessNco;
     user.unitId = body.unitId;
     await this.userRepo.save(user);

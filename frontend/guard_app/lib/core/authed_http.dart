@@ -23,6 +23,10 @@ Future<http.Response> authedGet(String path) => _send('GET', path);
 Future<http.Response> authedPost(String path, {Object? body}) =>
     _send('POST', path, body: body);
 
+/// PATCH [path] with an optional JSON [body]. Same 401 handling as [authedGet].
+Future<http.Response> authedPatch(String path, {Object? body}) =>
+    _send('PATCH', path, body: body);
+
 /// DELETE [path]. Same 401 handling as [authedGet].
 Future<http.Response> authedDelete(String path) => _send('DELETE', path);
 
@@ -48,6 +52,18 @@ Future<http.Response> _send(String method, String path, {Object? body}) async {
   }
 
   return response;
+}
+
+/// Decoded JSON body (null if empty) when [response] has [expectedStatus];
+/// otherwise throws with the server's error message.
+dynamic decodeOrThrow(http.Response response, int expectedStatus) {
+  if (response.statusCode != expectedStatus) {
+    throw Exception(
+      errorMessage(response) ??
+          'Request failed (status ${response.statusCode})',
+    );
+  }
+  return response.body.isEmpty ? null : jsonDecode(response.body);
 }
 
 /// The server's error message from a Nest error response, if there is one.

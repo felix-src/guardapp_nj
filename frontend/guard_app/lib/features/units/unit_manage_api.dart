@@ -1,7 +1,3 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
-
 import '../../core/authed_http.dart';
 
 class JoinCode {
@@ -70,17 +66,17 @@ class UnitMember {
 class UnitManageApi {
   static Future<JoinCode> fetchJoinCode(int unitId) async {
     final response = await authedGet('/units/$unitId/join-code');
-    return JoinCode.fromJson(_decode(response, 200));
+    return JoinCode.fromJson(decodeOrThrow(response, 200));
   }
 
   static Future<JoinCode> rotateJoinCode(int unitId) async {
     final response = await authedPost('/units/$unitId/join-code/rotate');
-    return JoinCode.fromJson(_decode(response, 201));
+    return JoinCode.fromJson(decodeOrThrow(response, 201));
   }
 
   static Future<List<UnitMember>> fetchMembers(int unitId) async {
     final response = await authedGet('/units/$unitId/members');
-    final body = _decode(response, 200) as List<dynamic>;
+    final body = decodeOrThrow(response, 200) as List<dynamic>;
     return body
         .map((m) => UnitMember.fromJson(m as Map<String, dynamic>))
         .toList();
@@ -88,7 +84,7 @@ class UnitManageApi {
 
   static Future<void> removeMember(int unitId, int userId) async {
     final response = await authedDelete('/units/$unitId/members/$userId');
-    _decode(response, 204);
+    decodeOrThrow(response, 204);
   }
 
   static Future<void> addContact(
@@ -107,21 +103,11 @@ class UnitManageApi {
         'email': ?email,
       },
     );
-    _decode(response, 201);
+    decodeOrThrow(response, 201);
   }
 
   static Future<void> removeContact(int unitId, int contactId) async {
     final response = await authedDelete('/units/$unitId/contacts/$contactId');
-    _decode(response, 204);
-  }
-
-  static dynamic _decode(http.Response response, int expectedStatus) {
-    if (response.statusCode != expectedStatus) {
-      throw Exception(
-        errorMessage(response) ??
-            'Request failed (status ${response.statusCode})',
-      );
-    }
-    return response.body.isEmpty ? null : jsonDecode(response.body);
+    decodeOrThrow(response, 204);
   }
 }

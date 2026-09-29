@@ -1,8 +1,10 @@
 import {
   IsEmail,
+  IsInt,
   IsNotEmpty,
   IsString,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -35,4 +37,14 @@ export class RegisterDto {
   @IsNotEmpty()
   @MaxLength(20)
   unitCode: string;
+
+  // Squad/section/HQ from GET /auth/join/:code
+  @IsInt()
+  @Min(1)
+  orgElementId: number;
+
+  // Duty role key allowed for that element
+  @IsString()
+  @MaxLength(40)
+  dutyRole: string;
 }

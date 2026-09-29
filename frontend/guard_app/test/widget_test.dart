@@ -8,7 +8,8 @@ void main() {
   ) async {
     await tester.pumpWidget(const GuardApp(isAuthenticated: false));
 
-    expect(find.widgetWithText(AppBar, 'Login'), findsOneWidget);
+    expect(find.text('NEW JERSEY NATIONAL GUARD'), findsOneWidget);
+    expect(find.text('Guard Resource App'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Email'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
     expect(find.widgetWithText(ElevatedButton, 'Login'), findsOneWidget);

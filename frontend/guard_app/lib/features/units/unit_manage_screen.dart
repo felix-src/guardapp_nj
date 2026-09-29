@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/format.dart';
+
+import '../org/org_chart_screen.dart';
 import 'unit.dart';
 import 'unit_api.dart';
 import 'unit_manage_api.dart';
@@ -163,7 +166,24 @@ class _UnitManageScreenState extends State<UnitManageScreen> {
       builder: (context, snapshot) {
         final data = snapshot.data;
         return Scaffold(
-          appBar: AppBar(title: Text(data?.unit.name ?? 'Manage unit')),
+          appBar: AppBar(
+            title: Text(data?.unit.name ?? 'Manage unit'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.account_tree),
+                tooltip: 'Org chart',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => OrgChartScreen(
+                      unitId: widget.unitId,
+                      unitName: data?.unit.name,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
           floatingActionButton: data == null
               ? null
               : FloatingActionButton.extended(
@@ -343,25 +363,6 @@ class _JoinCodeCard extends StatelessWidget {
     );
   }
 }
-
-const _months = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
-
-/// "Oct 5, 2026"
-String formatDate(DateTime date) =>
-    '${_months[date.month - 1]} ${date.day}, ${date.year}';
 
 class _NewContact {
   final String name;

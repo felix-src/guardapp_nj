@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/session.dart';
+import '../../core/theme.dart';
+import '../../core/ui.dart';
 import 'unit.dart';
 import 'unit_api.dart';
 import 'unit_manage_screen.dart';
+import '../org/org_chart_screen.dart';
 
 class UnitDetailScreen extends StatefulWidget {
   final int unitId;
@@ -50,6 +53,20 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
       appBar: AppBar(
         title: Text(widget.unitName),
         actions: [
+          if (Session.user?.canViewUnitChart(widget.unitId) ?? false)
+            IconButton(
+              icon: const Icon(Icons.account_tree),
+              tooltip: 'Org chart',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OrgChartScreen(
+                    unitId: widget.unitId,
+                    unitName: widget.unitName,
+                  ),
+                ),
+              ),
+            ),
           if (Session.user?.canManageUnit(widget.unitId) ?? false)
             IconButton(
               icon: const Icon(Icons.manage_accounts),
@@ -91,26 +108,31 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
           return RefreshIndicator(
             onRefresh: _refresh,
             child: ListView(
+              padding: const EdgeInsets.only(top: 8, bottom: 32),
               children: [
-                ListTile(
-                  leading: const Icon(Icons.location_on_outlined),
-                  title: const Text('State'),
-                  subtitle: Text(unit.state),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Text(
-                    'Points of Contact',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+                GroupedSection(
+                  children: [
+                    NavRow(
+                      icon: Icons.location_on,
+                      gradient: GuardColors.badgeGradients[2],
+                      title: 'State',
+                      subtitle: unit.state,
+                    ),
+                  ],
                 ),
                 if (unit.contacts.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text('No points of contact listed'),
+                  const GroupedSection(
+                    title: 'Points of contact',
+                    children: [
+                      ListTile(title: Text('No points of contact listed')),
+                    ],
                   ),
                 for (final contact in unit.contacts)
-                  _ContactCard(contact: contact, onLaunch: _launch),
+                  _ContactCard(
+                    contact: contact,
+                    onLaunch: _launch,
+                    showTitle: contact == unit.contacts.first,
+                  ),
               ],
             ),
           );
@@ -120,46 +142,46 @@ class _UnitDetailScreenState extends State<UnitDetailScreen> {
   }
 }
 
+/// One point of contact as its own grouped card: who, then call / email.
 class _ContactCard extends StatelessWidget {
   final PointOfContact contact;
   final Future<void> Function(Uri) onLaunch;
+  final bool showTitle;
 
-  const _ContactCard({required this.contact, required this.onLaunch});
+  const _ContactCard({
+    required this.contact,
+    required this.onLaunch,
+    this.showTitle = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final phone = contact.phone;
     final email = contact.email;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.person_outline),
-              title: Text(contact.name),
-              subtitle: Text(contact.position),
-            ),
-            if (phone != null)
-              ListTile(
-                dense: true,
-                leading: const Icon(Icons.phone_outlined),
-                title: Text(phone),
-                onTap: () => onLaunch(Uri(scheme: 'tel', path: phone)),
-              ),
-            if (email != null)
-              ListTile(
-                dense: true,
-                leading: const Icon(Icons.email_outlined),
-                title: Text(email),
-                onTap: () => onLaunch(Uri(scheme: 'mailto', path: email)),
-              ),
-          ],
+    return GroupedSection(
+      title: showTitle ? 'Points of contact' : null,
+      children: [
+        NavRow(
+          icon: Icons.person,
+          title: contact.name,
+          subtitle: contact.position,
         ),
-      ),
+        if (phone != null)
+          NavRow(
+            icon: Icons.phone,
+            gradient: GuardColors.badgeGradients[0],
+            title: phone,
+            onTap: () => onLaunch(Uri(scheme: 'tel', path: phone)),
+          ),
+        if (email != null)
+          NavRow(
+            icon: Icons.email,
+            gradient: GuardColors.badgeGradients[1],
+            title: email,
+            onTap: () => onLaunch(Uri(scheme: 'mailto', path: email)),
+          ),
+      ],
     );
   }
 }

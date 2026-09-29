@@ -52,6 +52,8 @@ class AuthApi {
     required String lastName,
     required String rank,
     required String unitCode,
+    required int orgElementId,
+    required String dutyRole,
   }) async {
     final response = await http.post(
       Uri.parse('$apiBaseUrl/auth/register'),
@@ -63,6 +65,8 @@ class AuthApi {
         'lastName': lastName,
         'rank': rank,
         'unitCode': unitCode,
+        'orgElementId': orgElementId,
+        'dutyRole': dutyRole,
       }),
     );
 

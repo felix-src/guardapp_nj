@@ -10,7 +10,7 @@ import { User } from './auth/user.entity';
 import { AuthService } from './auth/auth.service';
 import { AuthController } from './auth/auth.controller';
 import { JwtModule } from '@nestjs/jwt';
-import { MiddlewareConsumer} from '@nestjs/common';
+import { MiddlewareConsumer } from '@nestjs/common';
 import { LoggerMiddleware } from './common/logger.middleware';
 import { AuditLog } from './audit/audit-log.entity';
 import { AuditService } from './audit/audit.service';
@@ -20,31 +20,58 @@ import { Memo } from './memos/memo.entity';
 import { MemoController } from './memos/memo.controller';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { UnitScopeGuard } from './auth/unit-scope.guard';
-
+import { UnitMemberGuard } from './auth/unit-member.guard';
+import { OrgElement } from './org/org-element.entity';
+import { OrgService } from './org/org.service';
+import { OrgController } from './org/org.controller';
+import { ResourcesController } from './resources/resources.controller';
 
 @Module({
-  imports: [  
+  imports: [
     TypeOrmModule.forRoot({
-  type: 'postgres',
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT),
-  username: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  entities: [Unit, PointOfContact, User, AuditLog, Memo],
-  synchronize: true,
-}),
-TypeOrmModule.forFeature([Unit, PointOfContact, User, AuditLog, Memo]),
-// Only applied where ThrottlerGuard is used (AuthController)
-ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
-JwtModule.register({
-  secret: process.env.JWT_SECRET,
-  signOptions: { expiresIn: '1h' },
-}),
-
-],
-  controllers: [UnitsController, AppController, AuthController, AuditController,AdminUserController, MemoController],
-  providers: [AppService, UnitsService, AuthService, AuditService, UnitScopeGuard],
+      type: 'postgres',
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT),
+      username: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      entities: [Unit, PointOfContact, User, AuditLog, Memo, OrgElement],
+      synchronize: true,
+    }),
+    TypeOrmModule.forFeature([
+      Unit,
+      PointOfContact,
+      User,
+      AuditLog,
+      Memo,
+      OrgElement,
+    ]),
+    // Only applied where ThrottlerGuard is used (AuthController)
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '1h' },
+    }),
+  ],
+  controllers: [
+    UnitsController,
+    AppController,
+    AuthController,
+    AuditController,
+    AdminUserController,
+    MemoController,
+    OrgController,
+    ResourcesController,
+  ],
+  providers: [
+    AppService,
+    UnitsService,
+    AuthService,
+    AuditService,
+    OrgService,
+    UnitScopeGuard,
+    UnitMemberGuard,
+  ],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

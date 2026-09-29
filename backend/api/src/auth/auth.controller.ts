@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UseGuards, Req } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
@@ -12,6 +12,14 @@ import { RegisterDto } from './dto/register.dto';
 @UseGuards(ThrottlerGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  // Public: checks a unit code and returns the unit's platoons/squads for
+  // the sign-up form. Throttled like register since it reveals valid codes.
+  @Get('join/:code')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  lookupJoinCode(@Param('code') code: string) {
+    return this.authService.lookupJoinCode(code);
+  }
 
   @Post('register')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })

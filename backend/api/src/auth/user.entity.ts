@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
 import { Role } from './roles.enum';
 import { Unit } from '../units/unit.entity';
+import { OrgElement } from '../org/org-element.entity';
 
 @Entity()
 export class User {
@@ -35,4 +36,15 @@ export class User {
 
   @ManyToOne(() => Unit, (unit) => unit.members, { onDelete: 'SET NULL' })
   unit: Unit | null;
+
+  // Position in the unit's org chart; null = unassigned
+  @Column({ type: 'int', nullable: true })
+  orgElementId: number | null;
+
+  @ManyToOne(() => OrgElement, { onDelete: 'SET NULL' })
+  orgElement: OrgElement | null;
+
+  // Key from org/duty-roles.ts DUTY_ROLES
+  @Column({ type: 'varchar', nullable: true })
+  dutyRole: string | null;
 }
