@@ -76,7 +76,7 @@ export const ROLES_BY_KIND: Record<OrgKind, DutyRole[]> = {
 };
 
 export function isDutyRole(value: string): value is DutyRole {
-  return Object.prototype.hasOwnProperty.call(DUTY_ROLES, value);
+  return Object.hasOwn(DUTY_ROLES, value);
 }
 
 const ROLE_ORDER = Object.keys(DUTY_ROLES);

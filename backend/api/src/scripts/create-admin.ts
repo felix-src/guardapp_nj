@@ -1,9 +1,11 @@
 // Creates an admin account, or promotes an existing account to admin.
-// Usage: npm run create-admin -- <email>
-// The password is prompted for (or read from ADMIN_PASSWORD) so it never
-// lands in shell history.
+// Usage: npm run create-admin -- <email> [--reset-password]
+// --reset-password sets a new password on an existing account, clears any
+// lockout, and signs it out on every device (admin recovery).
+// Passwords are prompted for (or read from ADMIN_PASSWORD) so they never
+// land in shell history.
 import * as dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ quiet: true });
 
 import * as readline from 'readline';
 import { NestFactory } from '@nestjs/core';
@@ -13,18 +15,26 @@ import { AppModule } from '../app.module';
 import { AuthService } from '../auth/auth.service';
 import { User } from '../auth/user.entity';
 import { Role } from '../auth/roles.enum';
+import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from '../auth/password-policy';
+
+// readline has no public "hide input" option; this private hook is the
+// usual way to stop it echoing what's typed.
+type MaskableInterface = readline.Interface & {
+  _writeToOutput?: (s: string) => void;
+};
 
 function promptHidden(question: string): Promise<string> {
   return new Promise((resolve) => {
-    const rl = readline.createInterface({
+    const rl: MaskableInterface = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
       terminal: true,
     });
-    const rlAny = rl as any;
-    const write = rlAny._writeToOutput?.bind(rl);
-    rlAny._writeToOutput = (s: string) => {
-      if (s.startsWith(question)) write(question);
+    rl._writeToOutput = (s: string) => {
+      if (s.startsWith(question)) process.stdout.write(question);
     };
     rl.question(question, (answer) => {
       rl.close();
@@ -34,10 +44,25 @@ function promptHidden(question: string): Promise<string> {
   });
 }
 
+async function readNewPassword(): Promise<string> {
+  const password =
+    process.env.ADMIN_PASSWORD ?? (await promptHidden('New password: '));
+  if (
+    password.length < PASSWORD_MIN_LENGTH ||
+    password.length > PASSWORD_MAX_LENGTH
+  ) {
+    throw new Error(
+      `Password must be ${PASSWORD_MIN_LENGTH}-${PASSWORD_MAX_LENGTH} characters`,
+    );
+  }
+  return password;
+}
+
 async function main() {
   const email = process.argv[2]?.trim().toLowerCase();
-  if (!email) {
-    console.error('Usage: npm run create-admin -- <email>');
+  const resetPassword = process.argv.includes('--reset-password');
+  if (!email || email.startsWith('--')) {
+    console.error('Usage: npm run create-admin -- <email> [--reset-password]');
     process.exit(1);
   }
 
@@ -47,29 +72,28 @@ async function main() {
 
   try {
     const users = app.get<Repository<User>>(getRepositoryToken(User));
+    const auth = app.get(AuthService);
     let user = await users.findOneBy({ email });
 
     if (user) {
       console.log(`Account ${email} exists; promoting to admin.`);
-    } else {
-      const password =
-        process.env.ADMIN_PASSWORD ?? (await promptHidden('Password: '));
-      if (password.length < 8) {
-        throw new Error('Password must be at least 8 characters');
+      if (resetPassword) {
+        await auth.resetPassword(user.id, await readNewPassword());
+        console.log('Password reset; all devices signed out.');
       }
-      user = await app.get(AuthService).createUser(email, password);
+    } else {
+      user = await auth.createUser(email, await readNewPassword());
       console.log(`Created account ${email}.`);
     }
 
-    user.role = Role.Admin;
-    await users.save(user);
+    await users.update(user.id, { role: Role.Admin });
     console.log(`${email} is now an admin.`);
   } finally {
     await app.close();
   }
 }
 
-main().catch((err) => {
-  console.error(err.message ?? err);
+main().catch((err: unknown) => {
+  console.error(err instanceof Error ? err.message : err);
   process.exit(1);
 });

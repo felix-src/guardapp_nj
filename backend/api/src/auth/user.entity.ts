@@ -47,4 +47,16 @@ export class User {
   // Key from org/duty-roles.ts DUTY_ROLES
   @Column({ type: 'varchar', nullable: true })
   dutyRole: string | null;
+
+  // Signed into every token; bumping it signs the account out everywhere
+  // (lost phone, password change)
+  @Column({ default: 0 })
+  tokenVersion: number;
+
+  // Account lockout (see auth/lockout.ts)
+  @Column({ default: 0 })
+  failedLoginCount: number;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  lockedUntil: Date | null;
 }

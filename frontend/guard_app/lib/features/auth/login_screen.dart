@@ -30,14 +30,13 @@ class _LoginScreenState extends State<LoginScreen> {
       error = null;
     });
 
-    bool success = false;
     String? failure;
     try {
-      success = await AuthApi.login(
+      // Passwords are used exactly as typed (sign-up doesn't trim them)
+      failure = await AuthApi.login(
         emailController.text.trim(),
-        passwordController.text.trim(),
+        passwordController.text,
       );
-      if (!success) failure = 'Invalid credentials';
     } catch (_) {
       failure = 'Could not reach the server';
     }
@@ -49,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
       error = failure;
     });
 
-    if (success) {
+    if (failure == null) {
       Navigator.pushReplacementNamed(context, '/home');
     }
   }

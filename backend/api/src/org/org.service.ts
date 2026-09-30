@@ -19,7 +19,7 @@ import {
   TemplateElement,
 } from './duty-roles';
 import { CreateOrgElementDto } from './dto/create-org-element.dto';
-import { Role } from '../auth/roles.enum';
+import type { AuthUser } from '../auth/auth-user';
 import { orgAccess, restrictOrgChart } from './org-visibility';
 
 export interface OrgMemberView {
@@ -64,19 +64,18 @@ export class OrgService {
 
   /** The org chart as [viewer] may see it (see org-visibility.ts): the
    * whole company or just Company HQ + their platoon, with full or
-   * abbreviated names. Access is re-read from the database every time. */
-  async getOrgChart(unitId: number, viewer: { id: number; role: Role }) {
-    const self = await this.userRepo.findOne({
-      where: { id: viewer.id },
-      relations: { orgElement: true },
-    });
-    // Role from the database, not the JWT, so demotions apply immediately
-    const access = orgAccess(
-      viewer.role === Role.Admin ? Role.Admin : (self?.role ?? Role.Soldier),
-      self?.dutyRole ?? null,
-    );
-    const viewerPlatoonId =
-      self?.unitId === unitId ? (self.orgElement?.parentId ?? null) : null;
+   * abbreviated names. [viewer] comes from JwtAuthGuard, which loads it from
+   * the database, so position changes and demotions apply immediately. */
+  async getOrgChart(unitId: number, viewer: AuthUser) {
+    const access = orgAccess(viewer.role, viewer.dutyRole);
+
+    let viewerPlatoonId: number | null = null;
+    if (viewer.unitId === unitId && viewer.orgElementId) {
+      const element = await this.elementRepo.findOneBy({
+        id: viewer.orgElementId,
+      });
+      viewerPlatoonId = element?.parentId ?? null;
+    }
 
     const chart = await this.buildOrgChart(unitId);
     return {
@@ -254,7 +253,7 @@ export class OrgService {
     if (await this.elementRepo.existsBy({ unitId })) return;
 
     await this.dataSource.transaction(async (manager) => {
-      const locked = await manager.query(
+      const locked: { id: number }[] = await manager.query(
         'SELECT id FROM unit WHERE id = $1 FOR UPDATE',
         [unitId],
       );

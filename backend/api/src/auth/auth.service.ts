@@ -14,6 +14,20 @@ import { RegisterDto } from './dto/register.dto';
 import { UnitsService } from '../units/units.service';
 import { OrgService } from '../org/org.service';
 import { DUTY_ROLES, isDutyRole } from '../org/duty-roles';
+import { AuditService } from '../audit/audit.service';
+import { isUniqueViolation } from '../common/db-errors';
+import { afterFailedLogin, isLocked, MAX_FAILED_LOGINS } from './lockout';
+import type { JwtPayload } from './auth-user';
+
+const BCRYPT_ROUNDS = 12;
+
+// Compared against when the email doesn't exist, so a login attempt takes
+// the same time whether or not the account exists.
+const DUMMY_HASH = bcrypt.hashSync('timing-equalizer-not-a-password', 12);
+
+// One message for every failed login: doesn't reveal whether the email
+// exists or the account is locked.
+const LOGIN_FAILED = `Invalid email or password. After ${MAX_FAILED_LOGINS} failed attempts the account is locked for 15 minutes.`;
 
 @Injectable()
 export class AuthService {
@@ -23,6 +37,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly unitsService: UnitsService,
     private readonly orgService: OrgService,
+    private readonly auditService: AuditService,
   ) {}
 
   /** Unit name and structure for the sign-up form, if the code is valid. */
@@ -51,6 +66,13 @@ export class AuthService {
       orgElementId: dto.orgElementId,
       dutyRole: dto.dutyRole,
     });
+
+    await this.auditService.log(
+      user.id,
+      user.role,
+      'REGISTER',
+      '/auth/register',
+    );
 
     return {
       id: user.id,
@@ -91,7 +113,7 @@ export class AuthService {
       throw new ConflictException('An account with this email already exists');
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const user = this.userRepo.create({
       email: normalizedEmail,
       passwordHash,
@@ -100,9 +122,9 @@ export class AuthService {
 
     try {
       return await this.userRepo.save(user);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Two sign-ups racing for the same email
-      if (err?.code === '23505') {
+      if (isUniqueViolation(err)) {
         throw new ConflictException(
           'An account with this email already exists',
         );
@@ -111,33 +133,115 @@ export class AuthService {
     }
   }
 
-  async validateUser(email: string, password: string): Promise<User | null> {
+  async login(email: string, password: string) {
     const user = await this.userRepo.findOneBy({
       email: email.trim().toLowerCase(),
     });
-    if (!user) return null;
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return null;
+    const valid = await bcrypt.compare(
+      password,
+      user?.passwordHash ?? DUMMY_HASH,
+    );
+    if (!user) throw new UnauthorizedException(LOGIN_FAILED);
 
-    return user;
-  }
-
-  async login(email: string, password: string) {
-    const user = await this.validateUser(email, password);
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (isLocked(user)) {
+      // Even a correct password doesn't get in while locked
+      await this.auditService.log(
+        user.id,
+        user.role,
+        'LOGIN_WHILE_LOCKED',
+        '/auth/login',
+      );
+      throw new UnauthorizedException(LOGIN_FAILED);
     }
 
-    const payload = {
-      sub: user.id,
-      role: user.role,
-    };
+    if (!valid) {
+      const next = afterFailedLogin(user);
+      await this.userRepo.update(user.id, next);
+      await this.auditService.log(
+        user.id,
+        user.role,
+        next.lockedUntil ? 'ACCOUNT_LOCKED' : 'LOGIN_FAILED',
+        '/auth/login',
+      );
+      throw new UnauthorizedException(LOGIN_FAILED);
+    }
 
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+    if (user.failedLoginCount > 0 || user.lockedUntil) {
+      await this.userRepo.update(user.id, {
+        failedLoginCount: 0,
+        lockedUntil: null,
+      });
+    }
+    await this.auditService.log(user.id, user.role, 'LOGIN', '/auth/login');
+
+    return { access_token: this.issueToken(user) };
+  }
+
+  /** Invalidates every token issued so far for this account. */
+  async revokeSessions(userId: number) {
+    const result = await this.userRepo.increment(
+      { id: userId },
+      'tokenVersion',
+      1,
+    );
+    if (!result.affected) throw new NotFoundException('User not found');
+  }
+
+  /** Changes the password and signs out every other device. Returns a fresh
+   * token for this device. */
+  async changePassword(
+    userId: number,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('User not found');
+
+    if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+    if (currentPassword === newPassword) {
+      throw new BadRequestException(
+        'New password must be different from the current one',
+      );
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    user.tokenVersion += 1;
+    await this.userRepo.save(user);
+    await this.auditService.log(
+      user.id,
+      user.role,
+      'CHANGE_PASSWORD',
+      '/auth/change-password',
+    );
+
+    return { access_token: this.issueToken(user) };
+  }
+
+  /** Admin recovery (create-admin --reset-password): sets a new password,
+   * clears any lockout, and signs out every device. */
+  async resetPassword(userId: number, newPassword: string) {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('User not found');
+
+    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    user.tokenVersion += 1;
+    user.failedLoginCount = 0;
+    user.lockedUntil = null;
+    await this.userRepo.save(user);
+    await this.auditService.log(
+      user.id,
+      user.role,
+      'RESET_PASSWORD',
+      'create-admin',
+    );
+  }
+
+  private issueToken(user: User) {
+    const payload: JwtPayload = { sub: user.id, ver: user.tokenVersion };
+    return this.jwtService.sign(payload);
   }
 
   /** Profile for the app's home header: who, which unit, which position. */

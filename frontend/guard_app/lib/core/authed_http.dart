@@ -33,7 +33,7 @@ Future<http.Response> authedDelete(String path) => _send('DELETE', path);
 Future<http.Response> _send(String method, String path, {Object? body}) async {
   final token = await TokenStorage.read();
   if (token == null) {
-    await _endSession();
+    await endSession();
     throw SessionExpiredException();
   }
 
@@ -47,7 +47,7 @@ Future<http.Response> _send(String method, String path, {Object? body}) async {
   final response = await http.Response.fromStream(await request.send());
 
   if (response.statusCode == 401) {
-    await _endSession();
+    await endSession();
     throw SessionExpiredException();
   }
 
@@ -76,7 +76,8 @@ String? errorMessage(http.Response response) {
   return null;
 }
 
-Future<void> _endSession() async {
+/// Clears the local session and returns to the login screen.
+Future<void> endSession() async {
   await TokenStorage.clear();
   Session.clear();
   navigatorKey.currentState?.pushNamedAndRemoveUntil('/', (_) => false);

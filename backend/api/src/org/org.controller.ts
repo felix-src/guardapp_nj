@@ -8,12 +8,13 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UnitMemberGuard } from '../auth/unit-member.guard';
 import { UnitScopeGuard } from '../auth/unit-scope.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { AuthUser } from '../auth/auth-user';
 import { AuditService } from '../audit/audit.service';
 import { OrgService } from './org.service';
 import { CreateOrgElementDto } from './dto/create-org-element.dto';
@@ -33,11 +34,11 @@ export class OrgController {
   // position (need-to-know, see org-visibility.ts)
   @Get(':id/org-chart')
   @UseGuards(UnitMemberGuard)
-  getOrgChart(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    return this.orgService.getOrgChart(id, {
-      id: req.user.sub,
-      role: req.user.role,
-    });
+  getOrgChart(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.orgService.getOrgChart(id, user);
   }
 
   @Post(':id/org-elements')
@@ -45,13 +46,13 @@ export class OrgController {
   async addElement(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: CreateOrgElementDto,
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const element = await this.orgService.addElement(id, body);
 
     await this.auditService.log(
-      req.user.sub,
-      req.user.role,
+      user.id,
+      user.role,
       'CREATE_ORG_ELEMENT',
       `/units/${id}/org-elements`,
     );
@@ -65,7 +66,7 @@ export class OrgController {
     @Param('id', ParseIntPipe) id: number,
     @Param('elementId', ParseIntPipe) elementId: number,
     @Body() body: RenameOrgElementDto,
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
   ) {
     const element = await this.orgService.renameElement(
       id,
@@ -74,8 +75,8 @@ export class OrgController {
     );
 
     await this.auditService.log(
-      req.user.sub,
-      req.user.role,
+      user.id,
+      user.role,
       'RENAME_ORG_ELEMENT',
       `/units/${id}/org-elements/${elementId}`,
     );
@@ -89,13 +90,13 @@ export class OrgController {
   async deleteElement(
     @Param('id', ParseIntPipe) id: number,
     @Param('elementId', ParseIntPipe) elementId: number,
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
   ) {
     await this.orgService.deleteElement(id, elementId);
 
     await this.auditService.log(
-      req.user.sub,
-      req.user.role,
+      user.id,
+      user.role,
       'DELETE_ORG_ELEMENT',
       `/units/${id}/org-elements/${elementId}`,
     );
@@ -108,7 +109,7 @@ export class OrgController {
     @Param('id', ParseIntPipe) id: number,
     @Param('userId', ParseIntPipe) userId: number,
     @Body() body: SetPositionDto,
-    @Req() req: any,
+    @CurrentUser() user: AuthUser,
   ) {
     await this.orgService.setMemberPosition(
       id,
@@ -118,8 +119,8 @@ export class OrgController {
     );
 
     await this.auditService.log(
-      req.user.sub,
-      req.user.role,
+      user.id,
+      user.role,
       'SET_MEMBER_POSITION',
       `/units/${id}/members/${userId}/position`,
     );

@@ -180,7 +180,7 @@ function buildPdf(lines: string[]): Buffer {
   return Buffer.from(pdf, 'latin1');
 }
 
-main().catch((err) => {
-  console.error(err.message ?? err);
+main().catch((err: unknown) => {
+  console.error(err instanceof Error ? err.message : err);
   process.exit(1);
 });

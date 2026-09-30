@@ -18,9 +18,9 @@ class RegisterException implements Exception {
 }
 
 class AuthApi {
-  static String? accessToken;
-
-  static Future<bool> login(String email, String password) async {
+  /// Signs in and stores the token. Returns null on success, otherwise a
+  /// message for the user (the server's, which covers lockouts).
+  static Future<String?> login(String email, String password) async {
     final response = await http.post(
       Uri.parse('$apiBaseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
@@ -28,19 +28,35 @@ class AuthApi {
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = jsonDecode(response.body);
-
-      final token = data['access_token'];
-      if (token == null || token.isEmpty) {
-        return false;
-      }
-
-      accessToken = token;
+      final token = jsonDecode(response.body)['access_token'];
+      if (token is! String || token.isEmpty) return 'Sign-in failed';
       await TokenStorage.save(token);
-      return true;
+      return null;
     }
 
-    return false;
+    if (response.statusCode == 429) {
+      return 'Too many attempts. Wait a minute and try again.';
+    }
+    return errorMessage(response) ?? 'Invalid email or password';
+  }
+
+  /// Signs this account out on every device, including this one.
+  static Future<void> logoutAllDevices() async {
+    decodeOrThrow(await authedPost('/auth/logout-all'), 204);
+    await endSession();
+  }
+
+  /// Changes the password; every other device is signed out and this one
+  /// gets a fresh token.
+  static Future<void> changePassword(String current, String next) async {
+    final body = decodeOrThrow(
+      await authedPost(
+        '/auth/change-password',
+        body: {'currentPassword': current, 'newPassword': next},
+      ),
+      200,
+    );
+    await TokenStorage.save(body['access_token'] as String);
   }
 
   /// Creates a soldier account in the unit that [unitCode] belongs to.

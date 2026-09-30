@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'core/app_lock.dart';
 import 'core/authed_http.dart';
 import 'core/theme.dart';
 import 'features/auth/login_screen.dart';
@@ -27,6 +28,16 @@ class GuardApp extends StatelessWidget {
       // One route for the starting URL, so a /join link doesn't also stack
       // the login screen underneath it.
       onGenerateInitialRoutes: (name) => [_route(RouteSettings(name: name))],
+
+      // Face ID / passcode lock and app-switcher privacy cover. The web
+      // build is only the sign-up site, with no session to protect.
+      builder: (context, child) => kIsWeb
+          ? child!
+          : AppLock(
+              lockOnStart: isAuthenticated,
+              onSignOut: endSession,
+              child: child!,
+            ),
     );
   }
 

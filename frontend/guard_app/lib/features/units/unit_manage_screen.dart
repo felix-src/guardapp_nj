@@ -8,6 +8,8 @@ import 'unit.dart';
 import 'unit_api.dart';
 import 'unit_manage_api.dart';
 
+enum _MemberAction { signOut, remove }
+
 /// Readiness NCO (own unit) or admin: share the sign-up link, manage members
 /// and points of contact.
 class UnitManageScreen extends StatefulWidget {
@@ -128,6 +130,21 @@ class _UnitManageScreenState extends State<UnitManageScreen> {
     );
   }
 
+  /// Lost or stolen phone: ends every session for this member.
+  Future<void> _signOutMember(UnitMember member) async {
+    final ok = await _confirm(
+      'Sign out ${member.displayName}?',
+      'Use this if their phone is lost or stolen. They will be signed out '
+          'on every device and need to sign in again.',
+      'Sign out',
+    );
+    if (!ok) return;
+    await _run(
+      () => UnitManageApi.revokeMemberSessions(widget.unitId, member.id),
+      '${member.displayName} signed out on all devices',
+    );
+  }
+
   Future<void> _removeContact(PointOfContact contact) async {
     final ok = await _confirm(
       'Delete ${contact.name}?',
@@ -243,13 +260,24 @@ class _UnitManageScreenState extends State<UnitManageScreen> {
                     ? member.email
                     : '${member.email} · ${_roleLabel(member.role)}',
               ),
-              trailing: member.isSoldier
-                  ? IconButton(
-                      icon: const Icon(Icons.person_remove_outlined),
-                      tooltip: 'Remove',
-                      onPressed: () => _removeMember(member),
-                    )
-                  : null,
+              trailing: PopupMenuButton<_MemberAction>(
+                tooltip: 'Member actions',
+                onSelected: (action) => switch (action) {
+                  _MemberAction.signOut => _signOutMember(member),
+                  _MemberAction.remove => _removeMember(member),
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(
+                    value: _MemberAction.signOut,
+                    child: Text('Sign out all devices'),
+                  ),
+                  if (member.isSoldier)
+                    const PopupMenuItem(
+                      value: _MemberAction.remove,
+                      child: Text('Remove from unit'),
+                    ),
+                ],
+              ),
             ),
           _SectionHeader('Points of contact (${data.unit.contacts.length})'),
           if (data.unit.contacts.isEmpty)

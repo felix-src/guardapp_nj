@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>NJ Guard uses Face ID to keep unit information private if your phone is lost.</string>
 	<key>CFBundleDisplayName</key>
 	<string>NJ Guard</string>
 	<key>CFBundleExecutable</key>

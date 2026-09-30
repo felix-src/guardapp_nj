@@ -1,34 +1,24 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { User } from './user.entity';
 import { Role } from './roles.enum';
+import type { AuthedRequest } from './auth-user';
 
 /**
  * Use after JwtAuthGuard on routes with a unit `:id` param. Admins pass for
- * any unit; a Readiness NCO passes only for their own unit. The NCO's role
- * and unit are re-read from the database so a demotion or transfer takes
- * effect immediately instead of when their JWT expires.
+ * any unit; a Readiness NCO passes only for their own unit. JwtAuthGuard
+ * loads role and unit from the database, so a demotion or transfer takes
+ * effect immediately.
  */
 @Injectable()
 export class UnitScopeGuard implements CanActivate {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
-  ) {}
-
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest<AuthedRequest>();
     const user = request.user;
 
     if (!user) return false;
     if (user.role === Role.Admin) return true;
-    if (user.role !== Role.ReadinessNco) return false;
-
-    const current = await this.userRepo.findOneBy({ id: user.sub });
     return (
-      current?.role === Role.ReadinessNco &&
-      current.unitId === Number(request.params.id)
+      user.role === Role.ReadinessNco &&
+      user.unitId === Number(request.params.id)
     );
   }
 }

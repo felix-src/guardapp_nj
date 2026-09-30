@@ -18,26 +18,20 @@ import { AuditController } from './audit/audit.controller';
 import { AdminUserController } from './auth/admin.controller';
 import { Memo } from './memos/memo.entity';
 import { MemoController } from './memos/memo.controller';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { UnitScopeGuard } from './auth/unit-scope.guard';
 import { UnitMemberGuard } from './auth/unit-member.guard';
 import { OrgElement } from './org/org-element.entity';
 import { OrgService } from './org/org.service';
 import { OrgController } from './org/org.controller';
 import { ResourcesController } from './resources/resources.controller';
+import { dataSourceOptions } from './database/data-source';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      username: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      entities: [Unit, PointOfContact, User, AuditLog, Memo, OrgElement],
-      synchronize: true,
-    }),
+    // Pending migrations run at startup; the schema is never auto-synced
+    TypeOrmModule.forRoot({ ...dataSourceOptions, migrationsRun: true }),
     TypeOrmModule.forFeature([
       Unit,
       PointOfContact,
@@ -46,11 +40,21 @@ import { ResourcesController } from './resources/resources.controller';
       Memo,
       OrgElement,
     ]),
-    // Only applied where ThrottlerGuard is used (AuthController)
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
+    // Global per-IP rate limit; AuthController sets tighter limits
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     JwtModule.register({
       secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '1h' },
+      signOptions: {
+        expiresIn: '1h',
+        algorithm: 'HS256',
+        issuer: 'guardapp-api',
+        audience: 'guardapp',
+      },
+      verifyOptions: {
+        algorithms: ['HS256'],
+        issuer: 'guardapp-api',
+        audience: 'guardapp',
+      },
     }),
   ],
   controllers: [
@@ -71,6 +75,7 @@ import { ResourcesController } from './resources/resources.controller';
     OrgService,
     UnitScopeGuard,
     UnitMemberGuard,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {

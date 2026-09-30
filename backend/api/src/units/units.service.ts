@@ -17,6 +17,7 @@ import {
   JOIN_CODE_TTL_MS,
   normalizeJoinCode,
 } from './join-code';
+import { isUniqueViolation } from '../common/db-errors';
 
 @Injectable()
 export class UnitsService {
@@ -112,8 +113,8 @@ export class UnitsService {
           joinCodeExpiresAt: expiresAt,
         });
         return this.toJoinCodeResponse(code, expiresAt);
-      } catch (err: any) {
-        if (err?.code !== '23505') throw err; // unique_violation
+      } catch (err: unknown) {
+        if (!isUniqueViolation(err)) throw err;
       }
     }
     throw new Error('Could not generate a unique join code');
@@ -148,6 +149,12 @@ export class UnitsService {
       throw new ForbiddenException('Only soldier accounts can be removed');
     }
     await this.userRepository.delete(user.id);
+  }
+
+  /** Throws unless the user belongs to the unit. */
+  async ensureMember(unitId: number, userId: number) {
+    const exists = await this.userRepository.existsBy({ id: userId, unitId });
+    if (!exists) throw new NotFoundException('Member not found');
   }
 
   async ensureUnitExists(id: number) {

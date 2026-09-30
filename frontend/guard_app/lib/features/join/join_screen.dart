@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/api.dart';
+import '../../core/password_policy.dart';
 import '../../core/ui.dart';
 import '../org/org_api.dart';
 import '../org/org_models.dart';
@@ -266,9 +267,7 @@ class _JoinScreenState extends State<JoinScreen> {
             controller: _password,
             decoration: const InputDecoration(labelText: 'Password'),
             obscureText: true,
-            validator: (value) => (value == null || value.length < 8)
-                ? 'At least 8 characters'
-                : null,
+            validator: validateNewPassword,
           ),
           const SizedBox(height: 16),
           TextFormField(

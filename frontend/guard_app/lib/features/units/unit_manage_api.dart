@@ -87,6 +87,14 @@ class UnitManageApi {
     decodeOrThrow(response, 204);
   }
 
+  /// Signs the member out on every device (lost or stolen phone).
+  static Future<void> revokeMemberSessions(int unitId, int userId) async {
+    final response = await authedPost(
+      '/units/$unitId/members/$userId/revoke-sessions',
+    );
+    decodeOrThrow(response, 204);
+  }
+
   static Future<void> addContact(
     int unitId, {
     required String name,

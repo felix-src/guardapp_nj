@@ -1,12 +1,15 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/api.dart';
 import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../core/token_storage.dart';
 import '../../core/ui.dart';
+import '../auth/change_password_dialog.dart';
 import '../memos/memos_screen.dart';
 import '../org/org_chart_screen.dart';
+import '../pt/pt_hub_screen.dart';
 import '../resources/jobs_screen.dart';
 import '../resources/resources_screen.dart';
 import '../units/unit_detail_screen.dart';
@@ -60,6 +63,55 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _changePassword() async {
+    final changed = await showDialog<bool>(
+      context: context,
+      builder: (_) => const ChangePasswordDialog(),
+    );
+    if (changed == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password changed. Other devices were signed out.'),
+        ),
+      );
+    }
+  }
+
+  /// For a lost phone: ends every session, including this one.
+  Future<void> _logoutAllDevices() async {
+    final confirmed = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Sign out of all devices?'),
+        content: const Text(
+          'Use this if a phone is lost or stolen. You will need to sign in '
+          'again everywhere, including here.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sign Out All'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await AuthApi.logoutAllDevices();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not reach the server')),
+      );
+    }
+  }
+
   void _open(Widget screen) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
@@ -71,6 +123,20 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Text(user.displayName),
         message: Text(user.email),
         actions: [
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _changePassword();
+            },
+            child: const Text('Change Password'),
+          ),
+          CupertinoActionSheetAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _logoutAllDevices();
+            },
+            child: const Text('Sign Out of All Devices'),
+          ),
           CupertinoActionSheetAction(
             isDestructiveAction: true,
             onPressed: () {
@@ -112,6 +178,12 @@ class _HomeScreenState extends State<HomeScreen> {
         'Command memos',
         Icons.description,
         () => _open(const MemosScreen()),
+      ),
+      _Feature(
+        'PT Test',
+        'AFT calculator, timers & laps',
+        Icons.fitness_center,
+        () => _open(const PtHubScreen()),
       ),
       _Feature(
         'Resources',
